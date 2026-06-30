@@ -30,6 +30,38 @@ def get_pessoas():
 
     return jsonify(result), 200
 
+@person_bp.route('/api/pessoas/<string:id>', methods=['GET'])
+@jwt_required()
+def get_pessoa(id):
+    """
+    Retorna os detalhes de uma pessoa específica.
+    ---
+    tags:
+      - Pessoas
+    parameters:
+      - in: path
+        name: id
+        description: ID da pessoa a ser retornada
+        required: true
+        type: string
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Detalhes da pessoa
+      404:
+        description: Pessoa não encontrada
+    """
+    pessoa = db.session.get(Pessoa, id)
+    if not pessoa:
+        return jsonify({"error": "Pessoa não encontrada"}), 404
+    
+    pessoa_data = pessoa.json()
+    pessoa_data['idade'] = (datetime.now().year - datetime.strptime(pessoa_data['data_nascimento'], '%Y-%m-%d').year)-1
+    pessoa_data['tem_foto'] = bool(pessoa_data['tem_foto'])
+
+    return jsonify(pessoa_data), 200
+
 @person_bp.route('/api/pessoas', methods=['POST'])
 @jwt_required()
 @admin_required
@@ -62,6 +94,13 @@ def create_pessoa():
               enum: [Jovens, Senhoras, Senhores]
             senha:
               type: string
+    security:
+      - Bearer: []
+    responses:
+      201:
+        description: Pessoa criada com sucesso
+      400:
+        description: Erro ao criar pessoa
     """
     dados = request.get_json()
     
@@ -119,6 +158,15 @@ def update_pessoa(id):
             conjunto:
               type: string
               enum: [Jovens, Senhoras, Senhores]
+    security:
+      - Bearer: []
+    responses:
+        201:
+          description: Pessoa editada com sucesso
+        404:
+          description: Pessoa não encontrada
+        400:
+          description: Erro ao editar pessoa
     """
     pessoa = db.session.get(Pessoa, id)
     
@@ -150,12 +198,19 @@ def delete_pessoa(id):
     ---
     tags:
       - Pessoas
+    security:
+      - Bearer: []
     parameters:
       - in: path
         name: id
         description: ID da pessoa a ser atualizada
         required: true
         type: string
+    responses:
+      201:
+        description: Pessoa excluída com sucesso
+      404:
+        description: Pessoa não encontrada
     """
     pessoa = db.session.get(Pessoa, id)
     if not pessoa:
@@ -190,6 +245,15 @@ def upload_foto(id):
         description: Arquivo da foto a ser enviado
         required: true
         type: file
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Foto enviada com sucesso
+      404:
+        description: Pessoa não encontrada
+      400:
+        description: Erro ao enviar foto
     """
     pessoa = db.session.get(Pessoa, id)
     if not pessoa:
@@ -216,12 +280,23 @@ def get_foto(id):
     ---
     tags:
       - Pessoas
+    produces:
+      - image/jpeg
     parameters:
       - in: path
         name: id
         description: ID da pessoa a quem a foto pertence
         required: true
         type: string
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Foto retornada com sucesso
+        schema:
+          type: file
+      404:
+        description: Pessoa não encontrada
     """
     pessoa = db.session.get(Pessoa, id)
     if not pessoa:

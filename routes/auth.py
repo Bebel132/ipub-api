@@ -1,3 +1,4 @@
+from datetime import datetime
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, set_access_cookies
 from database import db
@@ -42,8 +43,6 @@ def login():
 
     user = Pessoa.query.filter_by(cpf=cpf).first()
 
-    print(user, cpf)
-
     if not user or not user.checkpassword(password):
         return jsonify({"msg": "Bad cpf or password"}), 401
     
@@ -78,15 +77,13 @@ def me():
             cpf:
               type: string
     """
-    user_id = get_jwt_identity()
-    user = Pessoa.query.get(user_id)
-    if not user:
+    pessoa_id = get_jwt_identity()
+    pessoa = Pessoa.query.get(pessoa_id)
+    if not pessoa:
         return jsonify({"msg": "User not found"}), 404
     
-    return jsonify({
-        "id": user.id,
-        "nome": user.nome,
-        "cpf": user.cpf
-    }), 200
-
-    return get_user_info()
+    pessoa_data = pessoa.json()
+    pessoa_data['idade'] = (datetime.now().year - datetime.strptime(pessoa_data['data_nascimento'], '%Y-%m-%d').year)-1
+    pessoa_data['tem_foto'] = bool(pessoa_data['tem_foto'])
+    
+    return jsonify(pessoa_data), 200
